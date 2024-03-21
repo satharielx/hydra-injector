@@ -11,14 +11,14 @@
 #include <commdlg.h>
 #include <d3d9.h>
 
-// Function prototypes
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 BOOL InjectDLL(DWORD processId, const wchar_t* dllPath);
 BOOL ListProcesses();
 std::wstring GetProcessName(DWORD processID);
 
-// Global variables
+
 DWORD g_Processes[1024];
 DWORD g_ProcessCount = 0;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -28,11 +28,11 @@ static UINT ResizeWidth = 0, ResizeHeight = 0;
 static D3DPRESENT_PARAMETERS d3dParameters = {};
 static ImGuiContext* g_ImGuiContext = nullptr;
 
-// Main function
+
 int main() {
     printf("Application started\n");
 
-    // Create window
+    
     HWND hWnd;
     {
         printf("Creating window\n");
@@ -46,14 +46,14 @@ int main() {
 
     }
 
-    // Initialize DirectX 9
+    
     d3dEngine = Direct3DCreate9(D3D_SDK_VERSION);
     if (d3dEngine == NULL) {
         MessageBox(hWnd, L"Failed to create DirectX 9 interface!", L"Error", MB_ICONERROR);
         return 1;
     }
 
-    // Create a DirectX 9 device
+    
     D3DPRESENT_PARAMETERS d3dpp = { 0 };
     ZeroMemory(&d3dpp, sizeof(d3dpp));
     d3dpp.Windowed = TRUE;
@@ -78,19 +78,19 @@ int main() {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;  // Enable Multi-Viewport / Platform Windows
-    g_ImGuiContext = ImGui::GetCurrentContext(); // Store the context pointer
+    ImGuiIO& io = ImGui::GetIO(); (void)io;  
+    g_ImGuiContext = ImGui::GetCurrentContext(); 
     ImGui_ImplWin32_Init(hWnd);
     ImGui_ImplDX9_Init(d3dDevice);
 
     printf("ImGui initialized\n");
 
-    // List processes
+   
     ListProcesses();
 
     printf("Message loop started\n");
 
-    // Main loop
+   
     bool done = false;
     while (!done)
     {
@@ -117,12 +117,12 @@ int main() {
             ImGui_ImplDX9_CreateDeviceObjects();
         }
 
-        // Start ImGui frame
+       
         ImGui_ImplDX9_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        // UI
+       
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
         ImGui::Begin("DLL Injector", nullptr, ImGuiWindowFlags_MenuBar);
 
@@ -151,7 +151,7 @@ int main() {
             }
             return true;
             }, nullptr, g_ProcessCount, 5)) {
-            // Process selected, do something with the process ID (g_Processes[selectedProcess])
+            
         }
 
 
@@ -207,7 +207,7 @@ int main() {
         d3dDevice->Present(NULL, NULL, NULL, NULL);
     }
 
-    // Cleanup
+    
     ImGui_ImplDX9_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
@@ -219,7 +219,7 @@ int main() {
     return 0;
 }
 
-// Window procedure
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
@@ -256,7 +256,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-// DLL injection function
+
 BOOL InjectDLL(DWORD processId, const wchar_t* dllPath) {
     HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
     if (hProcess == nullptr)
@@ -268,18 +268,22 @@ BOOL InjectDLL(DWORD processId, const wchar_t* dllPath) {
         return FALSE;
     }
 
-    LPVOID pRemoteBuffer = VirtualAllocEx(hProcess, nullptr, wcslen(dllPath) * sizeof(wchar_t) + sizeof(wchar_t), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    
+    size_t dllPathSize = (wcslen(dllPath) + 1) * sizeof(wchar_t);
+    LPVOID pRemoteBuffer = VirtualAllocEx(hProcess, nullptr, dllPathSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (pRemoteBuffer == nullptr) {
         CloseHandle(hProcess);
         return FALSE;
     }
 
-    if (!WriteProcessMemory(hProcess, pRemoteBuffer, dllPath, wcslen(dllPath) * sizeof(wchar_t) + sizeof(wchar_t), nullptr)) {
+   
+    if (!WriteProcessMemory(hProcess, pRemoteBuffer, dllPath, dllPathSize, nullptr)) {
         VirtualFreeEx(hProcess, pRemoteBuffer, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return FALSE;
     }
 
+    
     HANDLE hRemoteThread = CreateRemoteThread(hProcess, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(pLoadLibraryW), pRemoteBuffer, 0, nullptr);
     if (hRemoteThread == nullptr) {
         VirtualFreeEx(hProcess, pRemoteBuffer, 0, MEM_RELEASE);
@@ -288,6 +292,7 @@ BOOL InjectDLL(DWORD processId, const wchar_t* dllPath) {
     }
 
     WaitForSingleObject(hRemoteThread, INFINITE);
+   
     CloseHandle(hRemoteThread);
     VirtualFreeEx(hProcess, pRemoteBuffer, 0, MEM_RELEASE);
     CloseHandle(hProcess);
@@ -295,7 +300,8 @@ BOOL InjectDLL(DWORD processId, const wchar_t* dllPath) {
     return TRUE;
 }
 
-// List processes function
+
+
 BOOL ListProcesses() {
     DWORD processes[1024];
     DWORD bytesReturned = 0;
